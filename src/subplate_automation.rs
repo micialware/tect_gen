@@ -1,3 +1,5 @@
+use rayon::iter::ParallelIterator;
+use std::time::Instant;
 use crate::SeededRng;
 use crate::basic::{IntoImage, Table};
 use bevy::asset::{Assets, RenderAssetUsages};
@@ -5,8 +7,10 @@ use bevy::image::{BevyDefault, Image};
 use bevy::input::ButtonInput;
 use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::tasks::futures_lite::StreamExt;
 use rand::{ RngExt};
 use rand_chacha::ChaCha8Rng;
+use rayon::iter::IntoParallelIterator;
 
 pub fn update_automation_view(
     query: Query<(&Sprite, &SubPlateAutomation)>,
@@ -45,7 +49,7 @@ pub fn update_automation(
         return;
     }
 
-    let (mut automation, entity) = query.iter_mut().next().unwrap();
+    let (mut automation, _entity) = query.iter_mut().next().unwrap();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
         let random = &mut seeded_rng.0;
 
@@ -58,7 +62,8 @@ pub fn update_automation(
         automation.seed(random);
     }
 
-    if keys.just_pressed(KeyCode::Tab) {
+    if keys.just_pressed(KeyCode::AltRight) {
+        automation.smooth();
     }
 }
 
@@ -69,6 +74,8 @@ pub struct SubPlateAutomation {
 
 impl SubPlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
+        let time = Instant::now();
+
         for index in 0..self.world.side * self.world.side {
             let current_color = *self.world.get(index);
             if current_color == Color::BLACK || current_color != Color::WHITE {
@@ -86,9 +93,30 @@ impl SubPlateAutomation {
             }
             let color = around[rng.random_range(0..around.len())];
 
-
             self.world.set(index, color);
         }
+
+        println!("Time elapsed: {:?} ms", time.elapsed().as_millis());
+
+    }
+
+    fn smooth(&mut self) {
+        let range = 0..self.world.side * self.world.side;
+        let update = range.into_iter().map(|index| {
+            let around = self.world.around_line(index);
+            let mut counts: Vec<(Color, u8)> = vec![];
+            for p in around {
+                for count_index in 0..counts.len() {
+                    if counts[count_index].0 == *p {
+                        counts[count_index].1 += 1;
+                        continue
+                    }
+                }
+                counts.push((p.clone(), 1));
+            }
+            counts.iter().max_by_key(|(_, c)| {c}).unwrap().0
+        }).collect::<Vec<Color>>();
+        self.world.data = update;
     }
 
     fn seed(&mut self, rng: &mut ChaCha8Rng){

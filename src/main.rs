@@ -13,7 +13,7 @@ use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::SeedableRng;
 use seed_automation::SeedAutomation;
 
-const RECTANGLE_SIDE: f32 = 750.0;
+const RECTANGLE_SIDE: f32 = 1250.0;
 
 fn main() {
     App::new()

@@ -52,7 +52,7 @@ pub fn update_automation(
         let random = &mut seeded_rng.0;
         automation.next(random)
     }
-    if keys.just_pressed(KeyCode::Tab){
+    if keys.just_pressed(KeyCode::Enter){
         println!("Switching to PlateAutomation");
         commands.entity(entity).remove::<SeedAutomation>().insert(PlateAutomation{
             world: automation.world.clone()

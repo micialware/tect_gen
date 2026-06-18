@@ -1,3 +1,5 @@
+use rayon::iter::IndexedParallelIterator;
+use std::time::Instant;
 use crate::SeededRng;
 use crate::basic::{IntoImage, Table};
 use bevy::asset::{Assets, RenderAssetUsages};
@@ -7,8 +9,10 @@ use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, Res
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
+use rayon::prelude::IntoParallelIterator;
 use crate::seed_automation::SeedAutomation;
 use crate::subplate_automation::SubPlateAutomation;
+use rayon::iter::ParallelIterator;
 
 pub fn update_automation_view(
     query: Query<(&Sprite, &PlateAutomation)>,
@@ -54,10 +58,11 @@ pub fn update_automation(
     }
 
     if keys.just_pressed(KeyCode::AltLeft) {
-        automation.world.grow()
+        automation.world.grow();
+        println!("Map size {}", automation.world.side)
     }
 
-    if keys.just_pressed(KeyCode::Tab) {
+    if keys.just_pressed(KeyCode::Enter) {
         println!("Switching to SubPlateAutomation");
         let mut new_table = Table::<Color>::new(Color::BLACK, automation.world.side);
         automation.world.convert_copy(&mut new_table, |value| { if value { Color::WHITE } else { Color::BLACK } });
@@ -74,22 +79,30 @@ pub struct PlateAutomation {
 
 impl PlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
-        for index in 0..self.world.side * self.world.side {
+        let time = Instant::now();
+        let range = 0..self.world.side * self.world.side;
+        let randoms = range.clone().map(|x| rng.random::<f32>()).collect::<Vec<f32>>();
+        let updated = range.into_par_iter().zip(randoms).map(|(index, random)| {
             if *self.world.get(index) {
-                continue;
+                return true;
             }
 
             let around = self.world.around_line(index).iter().filter(|v| ***v).count();
 
             if around == 0 {
-                continue;
-            }
-            let chance = (around as f32 * 0.2).powi(2);
-            if rng.random::<f32>() > chance {
-                continue;
+                return false;
             }
 
-            self.world.set(index, true);
-        }
+            let chance = (around as f32 * 0.2).powi(2);
+            if random > chance {
+                return false;
+            }
+
+            return true;
+        }).collect::<Vec<bool>>();
+
+        self.world.data = updated;
+
+        println!("Time elapsed: {:?} ms", time.elapsed().as_millis());
     }
 }
