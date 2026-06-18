@@ -30,7 +30,7 @@ impl<T: Clone> Table<T> {
         &self.data[index]
     }
 
-    fn get_dim(&mut self, x: usize, y: usize) -> &T {
+    fn get_dim(&self, x: usize, y: usize) -> &T {
         self.get(x + y * self.side)
     }
 
@@ -60,7 +60,7 @@ impl<T: Clone> Table<T> {
         self.side = new_side;
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &T> {
+    pub fn iter(&self) -> impl Iterator<Item=&T> {
         self.data.iter()
     }
 
@@ -68,6 +68,23 @@ impl<T: Clone> Table<T> {
         for i in 0..self.data.len() {
             table.data[i] = f(self[i].clone())
         }
+    }
+
+    pub fn around_line(&self, index: usize) -> Vec<&T> {
+        self.around(index % self.side, index / self.side)
+    }
+
+
+    pub fn around(&self, x: usize, y: usize) -> Vec<&T> {
+        let coordinates = vec![
+            (x as isize, y as isize - 1),
+            (x as isize, y as isize + 1),
+            (x as isize + 1, y as isize),
+            (x as isize - 1, y as isize),
+        ];
+        coordinates.iter().filter(|(x, y)| {
+            *x >= 0 && *x < self.side as isize && *y >= 0 && *y < self.side as isize
+        }).map(|(x, y)| self.get_dim(*x as usize, *y as usize)).collect::<Vec<_>>()
     }
 }
 
@@ -94,6 +111,23 @@ impl IntoImage for Table<bool> {
                 data[idx] = value;
                 data[idx + 1] = value;
                 data[idx + 2] = value;
+                data[idx + 3] = 255;
+            });
+        data
+    }
+}
+impl IntoImage for Table<Color> {
+    fn get_image_data(&self) -> Vec<u8> {
+        let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
+        self.data
+            .iter()
+            .zip((0..self.data.len()).collect::<Vec<_>>())
+            .for_each(|(color, idx)| {
+                let idx = idx * 4;
+                let color = color.to_linear();
+                data[idx] = (color.red * 255.0) as u8;
+                data[idx + 1] = (color.green * 255.0) as u8;
+                data[idx + 2] = (color.blue * 255.0) as u8;
                 data[idx + 3] = 255;
             });
         data

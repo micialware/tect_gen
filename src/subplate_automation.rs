@@ -5,13 +5,11 @@ use bevy::image::{BevyDefault, Image};
 use bevy::input::ButtonInput;
 use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use rand::RngExt;
+use rand::{ RngExt};
 use rand_chacha::ChaCha8Rng;
-use crate::seed_automation::SeedAutomation;
-use crate::subplate_automation::SubPlateAutomation;
 
 pub fn update_automation_view(
-    query: Query<(&Sprite, &PlateAutomation)>,
+    query: Query<(&Sprite, &SubPlateAutomation)>,
     mut images: ResMut<Assets<Image>>,
 ) {
     if query.is_empty() {
@@ -37,10 +35,11 @@ pub fn update_automation_view(
 }
 
 pub fn update_automation(
-    mut query: Query<(&mut PlateAutomation, Entity)>,
+    mut query: Query<(&mut SubPlateAutomation, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
-    mut commands: Commands,
+    commands: Commands,
+
 ) {
     if query.is_empty() {
         return;
@@ -54,42 +53,54 @@ pub fn update_automation(
     }
 
     if keys.just_pressed(KeyCode::AltLeft) {
-        automation.world.grow()
+        let random = &mut seeded_rng.0;
+
+        automation.seed(random);
     }
 
     if keys.just_pressed(KeyCode::Tab) {
-        println!("Switching to SubPlateAutomation");
-        let mut new_table = Table::<Color>::new(Color::BLACK, automation.world.side);
-        automation.world.convert_copy(&mut new_table, |value| { if value { Color::WHITE } else { Color::BLACK } });
-        commands.entity(entity).remove::<PlateAutomation>().insert(SubPlateAutomation{
-            world: new_table
-        });
     }
 }
 
 #[derive(Component)]
-pub struct PlateAutomation {
-    pub(crate) world: Table<bool>,
+pub struct SubPlateAutomation {
+    pub(crate) world: Table<Color>,
 }
 
-impl PlateAutomation {
+impl SubPlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
         for index in 0..self.world.side * self.world.side {
-            if *self.world.get(index) {
+            let current_color = *self.world.get(index);
+            if current_color == Color::BLACK || current_color != Color::WHITE {
                 continue;
             }
 
-            let around = self.world.around_line(index).iter().filter(|v| ***v).count();
-
-            if around == 0 {
-                continue;
-            }
-            let chance = (around as f32 * 0.2).powi(2);
-            if rng.random::<f32>() > chance {
+            if rng.random::<f32>() < 0.7 {
                 continue;
             }
 
-            self.world.set(index, true);
+            let around = self.world.around_line(index).iter().filter(|v| ***v != Color::WHITE && ***v != Color::BLACK).map(|color| (*color).clone()).collect::<Vec<_>>();
+
+            if around.len() == 0 {
+                continue;
+            }
+            let color = around[rng.random_range(0..around.len())];
+
+
+            self.world.set(index, color);
+        }
+    }
+
+    fn seed(&mut self, rng: &mut ChaCha8Rng){
+        let len = (self.world.side * self.world.side) as f32;
+        loop {
+            let index = (rng.random::<f32>() * len) as usize;
+            if *self.world.get(index) == Color::BLACK {
+                continue;
+            }
+
+            self.world.set(index, Color::hsv(rng.random::<f32>() * 360.0, 1.0, 1.0));
+            break;
         }
     }
 }

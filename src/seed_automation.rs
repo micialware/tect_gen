@@ -9,7 +9,7 @@ use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use crate::plate_automation::PlateAutomation;
 
-pub fn update_automation_view_seed(
+pub fn update_automation_view(
     query: Query<(&Sprite, &SeedAutomation)>,
     mut images: ResMut<Assets<Image>>,
 ) {
@@ -36,7 +36,7 @@ pub fn update_automation_view_seed(
     images.insert(sprite.image.id(), image).unwrap();
 }
 
-pub fn update_automation_seed(
+pub fn update_automation(
     mut query: Query<(&mut SeedAutomation, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
