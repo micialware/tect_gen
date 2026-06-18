@@ -1,5 +1,5 @@
+use bevy::prelude::Color;
 use std::ops::{Index, IndexMut};
-use ggez::graphics::Color;
 
 pub struct Table<T: Clone> {
     default: T,
@@ -7,12 +7,12 @@ pub struct Table<T: Clone> {
     pub(crate) side: usize,
 }
 
-impl<T : Clone> Clone for Table<T>{
+impl<T: Clone> Clone for Table<T> {
     fn clone(&self) -> Self {
-        Table{
+        Table {
             default: self.default.clone(),
             data: self.data.clone(),
-            side: self.side
+            side: self.side,
         }
     }
 }
@@ -59,11 +59,11 @@ impl<T: Clone> Table<T> {
         self.data = temp_table.data;
         self.side = new_side;
     }
-    
-    pub fn iter(&self) -> impl Iterator<Item=&T> {
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
         self.data.iter()
     }
-    
+
     pub fn convert_copy<X: Clone>(&self, table: &mut Table<X>, f: impl Fn(T) -> X) {
         for i in 0..self.data.len() {
             table.data[i] = f(self[i].clone())
@@ -77,25 +77,30 @@ impl<T: Clone> Into<Vec<T>> for Table<T> {
     }
 }
 
-impl Into<Vec<u8>> for Table<Color> {
-    fn into(self) -> Vec<u8> {
+pub trait IntoImage {
+    fn get_image_data(&self) -> Vec<u8>;
+}
+
+impl IntoImage for Table<bool> {
+    fn get_image_data(&self) -> Vec<u8> {
         let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
         self.data
             .iter()
             .zip((0..self.data.len()).collect::<Vec<_>>())
             .for_each(|(color, idx)| {
-                let (r, g, b, a) = color.to_rgba();
                 let idx = idx * 4;
-                data[idx] = r;
-                data[idx + 1] = g;
-                data[idx + 2] = b;
-                data[idx + 3] = a;
+                let value = if *color { 255 } else { 0 };
+
+                data[idx] = value;
+                data[idx + 1] = value;
+                data[idx + 2] = value;
+                data[idx + 3] = 255;
             });
         data
     }
 }
 
-impl<T : Clone> Index<usize> for Table<T>{
+impl<T: Clone> Index<usize> for Table<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -103,7 +108,7 @@ impl<T : Clone> Index<usize> for Table<T>{
     }
 }
 
-impl<T : Clone> IndexMut<usize> for Table<T>{
+impl<T: Clone> IndexMut<usize> for Table<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         self.data.index_mut(index)
     }
