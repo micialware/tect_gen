@@ -18,7 +18,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .insert_resource(Time::<Fixed>::from_hz(1024.0))
-        .add_systems(Update, keyboard_input_system)
+        // .add_systems(Update, automation_keyboard_input_system)
         .add_systems(Update, seed_automation::update_automation_seed)
         .add_systems(Update, seed_automation::update_automation_view_seed)
         .add_systems(Update, plate_automation::update_automation_plate)
@@ -44,5 +44,27 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.insert_resource(SeededRng(seeded_rng));
 }
 
+// fn automation_keyboard_input_system(keys: Res<ButtonInput<KeyCode>>, mut commands: Commands) {
+//     if keys.just_pressed(KeyCode::Space) {
+//         commands.spawn((AutomationNext,));
+//     }
+//
+//     if keys.just_pressed(KeyCode::Tab) {
+//         commands.spawn((AutomationMigrate,));
+//     }
+//
+//     if keys.just_pressed(KeyCode::AltLeft) {
+//         commands.spawn((AutomationScale,));
+//     }
+// }
+//
+// #[derive(Component)]
+// struct AutomationNext;
+//
+// #[derive(Component)]
+// struct AutomationScale;
+//
+// #[derive(Component)]
+// struct AutomationMigrate;
 #[derive(Resource)]
 struct SeededRng(ChaCha8Rng);
