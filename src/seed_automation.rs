@@ -69,11 +69,13 @@ impl SeedAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
         let len = (self.world.side * self.world.side) as f32;
         loop {
-            let index = (rng.random::<f32>() * len) as usize;
-            if *self.world.get(index) {
+            let x = rng.random_range(2..14);
+            let y = rng.random_range(2..14);
+
+            if *self.world.get_dim(x, y) {
                 continue;
             }
-            self.world.set(index, true);
+            self.world.set_dim(x, y, true);
             break;
         }
     }

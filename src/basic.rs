@@ -30,7 +30,7 @@ impl<T: Clone> Table<T> {
         &self.data[index]
     }
 
-    fn get_dim(&self, x: usize, y: usize) -> &T {
+    pub fn get_dim(&self, x: usize, y: usize) -> &T {
         self.get(x + y * self.side)
     }
 
