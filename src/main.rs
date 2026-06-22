@@ -2,9 +2,11 @@ mod basic;
 mod seed_automation;
 mod plate_automation;
 mod subplate_automation;
+mod hex_table;
 
 use crate::basic::{IntoImage, Table};
 use bevy::asset::io::embedded::GetAssetServer;
+use bevy::image::TextureFormatPixelInfo;
 use bevy::input::keyboard::keyboard_input_system;
 use bevy::prelude::*;
 use bevy::window::{ExitCondition, WindowResolution};
@@ -12,8 +14,11 @@ use rand::{Rng, RngExt};
 use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::SeedableRng;
 use seed_automation::SeedAutomation;
+use crate::subplate_automation::HexMatrixView;
 
 const RECTANGLE_SIDE: f32 = 1250.0;
+
+
 
 fn main() {
     App::new()
@@ -33,11 +38,14 @@ fn main() {
         .add_systems(Update, plate_automation::update_automation_view)
         .add_systems(Update, subplate_automation::update_automation)
         .add_systems(Update, subplate_automation::update_automation_view)
+        .add_systems(Update, subplate_automation::setup_hex_matrix)
         .run();
 }
 
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     commands.spawn(Camera2d);
+
+
 
     let handle = images.add(Image::default());
 
@@ -45,13 +53,29 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
     shape.custom_size = Some(Vec2::new(RECTANGLE_SIDE, RECTANGLE_SIDE));
 
     let automation = SeedAutomation {
-        world: Table::new(false, 16),
+        world: Table::new(false, 64),
     };
 
     commands.spawn((shape, automation));
 
     let seeded_rng = ChaCha8Rng::seed_from_u64(rand::random());
     commands.insert_resource(SeededRng(seeded_rng));
+
+    let mut hex_image = Image::default();
+    hex_image.data = Some(vec![
+        0;
+        hex_image
+            .texture_descriptor
+            .format
+            .pixel_size()
+            .unwrap_or(0)
+    ]);
+    let handle = images.add(hex_image);
+
+    let mut shape = Sprite::from_image(handle);
+    shape.custom_size = Some(Vec2::new(RECTANGLE_SIDE, RECTANGLE_SIDE));
+
+    commands.spawn((shape, HexMatrixView, Transform::from_xyz(0.0, 0.0, 1.0)));
 }
 
 #[derive(Resource)]

@@ -11,7 +11,7 @@ use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use rayon::prelude::IntoParallelIterator;
 use crate::seed_automation::SeedAutomation;
-use crate::subplate_automation::SubPlateAutomation;
+use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation};
 use rayon::iter::ParallelIterator;
 
 pub fn update_automation_view(
@@ -64,11 +64,12 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::Enter) {
         println!("Switching to SubPlateAutomation");
-        let mut new_table = Table::<Color>::new(Color::BLACK, automation.world.side);
-        automation.world.convert_copy(&mut new_table, |value| { if value { Color::WHITE } else { Color::BLACK } });
+        let mut new_table = Table::<Color>::new(Color::NONE, automation.world.side);
+        automation.world.convert_copy(&mut new_table, |value| { if value { Color::WHITE } else { Color::NONE} });
         commands.entity(entity).remove::<PlateAutomation>().insert(SubPlateAutomation{
             world: new_table
         });
+        commands.spawn((HexMatrixRequest));
     }
 }
 

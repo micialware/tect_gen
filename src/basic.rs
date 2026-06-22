@@ -111,7 +111,7 @@ impl IntoImage for Table<bool> {
                 data[idx] = value;
                 data[idx + 1] = value;
                 data[idx + 2] = value;
-                data[idx + 3] = 255;
+                data[idx + 3] = value;
             });
         data
     }
@@ -125,10 +125,10 @@ impl IntoImage for Table<Color> {
             .for_each(|(color, idx)| {
                 let idx = idx * 4;
                 let color = color.to_linear();
-                data[idx] = (color.red * 255.0) as u8;
-                data[idx + 1] = (color.green * 255.0) as u8;
-                data[idx + 2] = (color.blue * 255.0) as u8;
-                data[idx + 3] = 255;
+                data[idx] = (color.red * 256.0) as u8;
+                data[idx + 1] = (color.green * 256.0) as u8;
+                data[idx + 2] = (color.blue * 256.0) as u8;
+                data[idx + 3] = (color.alpha * 256.0) as u8;
             });
         data
     }

@@ -1,0 +1,31 @@
+pub struct HexTable {
+    len: usize,
+}
+
+const VERTICAL_OFFSET: f32 = 0.866025;
+impl HexTable {
+    pub fn new(len: usize) -> Self{
+        Self{
+            len
+        }
+    }
+
+    pub fn calculate(&self) -> Vec<(f32, f32)>{
+        let mut vec = Vec::with_capacity(self.len * self.len);
+        let mut index = 0;
+        loop {
+            let x = index % self.len;
+            let y = index / self.len;
+            let y_point = y as f32 * VERTICAL_OFFSET;
+
+            if y_point as usize > self.len   {
+                break;
+            }
+            let mut x_point = x as f32;
+            if y % 2 == 1 { x_point += 0.5; }
+            vec.push((x_point, y_point));
+            index += 1;
+        }
+        vec
+    }
+}

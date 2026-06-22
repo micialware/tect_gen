@@ -69,8 +69,8 @@ impl SeedAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
         let len = (self.world.side * self.world.side) as f32;
         loop {
-            let x = rng.random_range(2..14);
-            let y = rng.random_range(2..14);
+            let x = rng.random_range(16..48);
+            let y = rng.random_range(16..48);
 
             if *self.world.get_dim(x, y) {
                 continue;
