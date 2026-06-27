@@ -39,6 +39,7 @@ fn main() {
         .add_systems(Update, subplate_automation::update_automation)
         .add_systems(Update, subplate_automation::update_automation_view)
         .add_systems(Update, subplate_automation::setup_hex_matrix)
+        .add_systems(Update, subplate_automation::update_hex_matrix_view)
         .run();
 }
 

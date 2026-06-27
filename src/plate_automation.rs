@@ -64,8 +64,8 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::Enter) {
         println!("Switching to SubPlateAutomation");
-        let mut new_table = Table::<Color>::new(Color::NONE, automation.world.side);
-        automation.world.convert_copy(&mut new_table, |value| { if value { Color::WHITE } else { Color::NONE} });
+        let mut new_table = Table::<u8>::new(0, automation.world.side);
+        automation.world.convert_copy(&mut new_table, |value| { if value { u8::MAX } else { 0 } });
         commands.entity(entity).remove::<PlateAutomation>().insert(SubPlateAutomation{
             world: new_table
         });
@@ -104,6 +104,5 @@ impl PlateAutomation {
 
         self.world.data = updated;
 
-        println!("Time elapsed: {:?} ms", time.elapsed().as_millis());
     }
 }

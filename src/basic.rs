@@ -134,6 +134,24 @@ impl IntoImage for Table<Color> {
     }
 }
 
+impl IntoImage for Table<u8> {
+    fn get_image_data(&self) -> Vec<u8> {
+        let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
+        self.data
+            .iter()
+            .zip((0..self.data.len()).collect::<Vec<_>>())
+            .for_each(|(color, idx)| {
+                let idx = idx * 4;
+
+                data[idx] = *color;
+                data[idx + 1] = *color;
+                data[idx + 2] = *color;
+                data[idx + 3] = if *color != 0 { 255 } else { 0 };
+            });
+        data
+    }
+}
+
 impl<T: Clone> Index<usize> for Table<T> {
     type Output = T;
 
