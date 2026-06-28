@@ -1,5 +1,6 @@
 use std::ops::{Index, IndexMut};
 use bevy::asset::RenderAssetUsages;
+use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
@@ -123,7 +124,7 @@ impl IntoImage for Table<bool> {
             },
             TextureDimension::D2,
             data,
-            TextureFormat::bevy_default(),
+            TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         )
     }
@@ -150,7 +151,7 @@ impl IntoImage for Table<Color> {
             },
             TextureDimension::D2,
             data,
-            TextureFormat::bevy_default(),
+            TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         )
     }
@@ -179,7 +180,7 @@ impl IntoImage for Table<u8> {
             },
             TextureDimension::D2,
             data,
-            TextureFormat::bevy_default(),
+            TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         )
     }

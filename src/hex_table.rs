@@ -134,7 +134,7 @@ impl IntoImage for HexTable<bool> {
             },
             TextureDimension::D2,
             &[0, 0, 0, 0],
-            TextureFormat::bevy_default(),
+            TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         );
 
@@ -166,7 +166,7 @@ impl IntoImage for HexTable<u8> {
             },
             TextureDimension::D2,
             &[0, 0, 0, 0],
-            TextureFormat::bevy_default(),
+            TextureFormat::Rgba8UnormSrgb,
             RenderAssetUsages::default(),
         );
 
