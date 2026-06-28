@@ -1,12 +1,23 @@
-pub struct HexTable {
-    len: usize,
-    scale: f32,
+pub struct HexTable<T: Clone> {
+    default: T,
+    pub(crate) data: Vec<T>,
+    pub(crate) len: usize,
+    pub(crate) scale: f32,
+    pub(crate) dimensions: (usize, usize),
 }
 
 const VERTICAL_OFFSET: f32 = 0.866025;
-impl HexTable {
-    pub fn new(len: usize, scale: f32) -> Self {
-        Self { len, scale }
+impl<T: Clone> HexTable<T> {
+    pub fn new(len: usize, default: T, scale: f32) -> Self {
+        let rows = len - 1;
+        let columns = (len as f32 / VERTICAL_OFFSET) as usize;
+        Self {
+            default: default.clone(),
+            len,
+            scale,
+            data: vec![default; rows * columns],
+            dimensions: (rows, columns),
+        }
     }
 
     pub fn calculate(&self) -> Vec<(f32, f32)> {
@@ -30,25 +41,43 @@ impl HexTable {
         vec
     }
 
-    pub fn around(&self, x: f32, y: f32) -> Vec<(f32, f32)> {
-        let around = vec![
-            (x + self.scale, y),
-            (x - self.scale, y),
-            (x + 0.5 * self.scale, y + VERTICAL_OFFSET * self.scale),
-            (x - 0.5 * self.scale, y + VERTICAL_OFFSET * self.scale),
-            (x + 0.5 * self.scale, y - VERTICAL_OFFSET * self.scale),
-            (x - 0.5 * self.scale, y - VERTICAL_OFFSET * self.scale),
+    pub fn around(&self, x: usize, y: usize) -> Vec<&T> {
+        let x = x as isize;
+        let y = y as isize;
+        let around : Vec<(isize, isize)> = vec![
+            (x, y + 1),
+            (x + 1, y + 1),
+            (x, y - 1),
+            (x + 1, y - 1),
+            (x - 1, y),
+            (x + 1, y),
         ];
 
         around
             .iter()
             .filter(|(x, y)| {
-                *x >= 0.0
-                    && *x < self.scale * self.len as f32
-                    && *y >= 0.0
-                    && *y < self.scale * self.len as f32
+                *x >= 0
+                    && *x <= self.dimensions.0 as isize
+                    && *y >= 0
+                    && *y < self.dimensions.1 as isize
             })
-            .map(|(x, y)| (*x, *y))
+            .map(|(x, y)| self.get_dim(*x as usize, *y as usize))
             .collect()
+    }
+
+    pub fn get(&self, index: usize) -> &T {
+        &self.data[index]
+    }
+
+    pub fn get_dim(&self, x: usize, y: usize) -> &T {
+        self.get(x + y * self.dimensions.0)
+    }
+
+    pub fn set(&mut self, index: usize, value: T) {
+        self.data[index] = value;
+    }
+
+    pub fn set_dim(&mut self, x: usize, y: usize, value: T) {
+        self.set(x + y * self.dimensions.0, value);
     }
 }

@@ -1,5 +1,5 @@
 use crate::SeededRng;
-use crate::basic::{IntoImage, Table};
+use crate::table::{IntoImage, Table};
 use bevy::asset::{Assets, RenderAssetUsages};
 use bevy::image::{BevyDefault, Image};
 use bevy::input::ButtonInput;

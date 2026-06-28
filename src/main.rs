@@ -1,10 +1,10 @@
-mod basic;
+mod table;
 mod seed_automation;
 mod plate_automation;
 mod subplate_automation;
 mod hex_table;
 
-use crate::basic::{IntoImage, Table};
+use crate::table::{IntoImage, Table};
 use bevy::asset::io::embedded::GetAssetServer;
 use bevy::image::TextureFormatPixelInfo;
 use bevy::input::keyboard::keyboard_input_system;
@@ -84,7 +84,7 @@ struct SeededRng(ChaCha8Rng);
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::Table;
+    use crate::table::Table;
 
     #[test]
     fn around_1(){

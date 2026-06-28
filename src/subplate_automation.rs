@@ -1,4 +1,4 @@
-use crate::basic::{IntoImage, Table};
+use crate::table::{IntoImage, Table};
 use crate::hex_table::HexTable;
 use crate::SeededRng;
 use bevy::asset::{Assets, RenderAssetUsages};
@@ -196,7 +196,7 @@ pub fn setup_hex_matrix(
 
     let resolution = automation.world.side / 4;
 
-    let generator = HexTable::new(resolution, 4.0);
+    let generator = HexTable::new(resolution, true, 4.0);
     let mut table = Table::new(false, automation.world.side);
     generator.calculate().iter().for_each(|(x, y)| {
         let x = *x as usize;
@@ -281,5 +281,5 @@ pub struct HexMatrixView;
 #[derive(Component)]
 pub struct HexMatrixBuild{
     points: Table<bool>,
-    hex_matrix: HexTable
+    hex_matrix: HexTable<bool>
 }
