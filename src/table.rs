@@ -1,5 +1,7 @@
-use bevy::prelude::Color;
 use std::ops::{Index, IndexMut};
+use bevy::asset::RenderAssetUsages;
+use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 pub struct Table<T: Clone> {
     default: T,
@@ -95,11 +97,11 @@ impl<T: Clone> Into<Vec<T>> for Table<T> {
 }
 
 pub trait IntoImage {
-    fn get_image_data(&self) -> Vec<u8>;
+    fn get_image_data(&self) -> Image;
 }
 
 impl IntoImage for Table<bool> {
-    fn get_image_data(&self) -> Vec<u8> {
+    fn get_image_data(&self) -> Image {
         let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
         self.data
             .iter()
@@ -113,11 +115,21 @@ impl IntoImage for Table<bool> {
                 data[idx + 2] = value;
                 data[idx + 3] = value;
             });
-        data
+        Image::new(
+            Extent3d {
+                width: self.side as u32,
+                height: self.side as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            data,
+            TextureFormat::bevy_default(),
+            RenderAssetUsages::default(),
+        )
     }
 }
 impl IntoImage for Table<Color> {
-    fn get_image_data(&self) -> Vec<u8> {
+    fn get_image_data(&self) -> Image {
         let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
         self.data
             .iter()
@@ -130,12 +142,22 @@ impl IntoImage for Table<Color> {
                 data[idx + 2] = (color.blue * 256.0) as u8;
                 data[idx + 3] = (color.alpha * 256.0) as u8;
             });
-        data
+        Image::new(
+            Extent3d {
+                width: self.side as u32,
+                height: self.side as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            data,
+            TextureFormat::bevy_default(),
+            RenderAssetUsages::default(),
+        )
     }
 }
 
 impl IntoImage for Table<u8> {
-    fn get_image_data(&self) -> Vec<u8> {
+    fn get_image_data(&self) -> Image {
         let mut data: Vec<u8> = vec![0; self.side * self.side * 4];
         self.data
             .iter()
@@ -148,7 +170,18 @@ impl IntoImage for Table<u8> {
                 data[idx + 2] = *color;
                 data[idx + 3] = if *color != 0 { 255 } else { 0 };
             });
-        data
+
+        Image::new(
+            Extent3d {
+                width: self.side as u32,
+                height: self.side as u32,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            data,
+            TextureFormat::bevy_default(),
+            RenderAssetUsages::default(),
+        )
     }
 }
 

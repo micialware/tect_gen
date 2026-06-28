@@ -1,11 +1,13 @@
-use crate::table::{IntoImage, Table};
 use crate::hex_table::HexTable;
+use crate::table::{IntoImage, Table};
 use crate::SeededRng;
-use bevy::asset::{Assets, RenderAssetUsages};
-use bevy::image::{BevyDefault, Image};
+use bevy::asset::Assets;
+use bevy::image::Image;
 use bevy::input::ButtonInput;
-use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite, Text, With};
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::prelude::{
+    Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite,
+    With,
+};
 use bevy::tasks::futures_lite::StreamExt;
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
@@ -20,36 +22,20 @@ pub fn update_automation_view(
         return;
     }
     let (sprite, automation) = query.iter().next().unwrap();
-    let size = automation.world.side as u32;
-    let data = automation.world.get_image_data();
-    let image = Image::new(
-        Extent3d {
-            width: size,
-            height: size,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::bevy_default(),
-        RenderAssetUsages::default(),
-    );
+    let image = automation.world.get_image_data();
 
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 }
 
 pub fn update_automation(
-    mut query: Query<(&mut SubPlateAutomation, Entity)>,
-    mut hex_query: Query<&HexMatrixBuild>,
+    query: Single<(&mut SubPlateAutomation, Entity)>,
+    hex_query: Single<&mut HexMatrixBuild>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
 ) {
-    if query.is_empty() {
-        return;
-    }
-
-    let (mut automation, _entity) = query.iter_mut().next().unwrap();
+    let (mut automation, _entity) = query.into_inner();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
         let random = &mut seeded_rng.0;
 
@@ -73,7 +59,7 @@ pub fn update_automation(
     }
 
     if keys.just_pressed(KeyCode::KeyF) {
-        automation.calculate_front_lines(&mut commands, hex_query);
+        automation.calculate_front_lines(&mut commands, hex_query, &automation);
     }
 }
 
@@ -111,7 +97,6 @@ impl SubPlateAutomation {
 
             self.world.set(index, color);
         }
-
     }
 
     fn smooth(&mut self) {
@@ -141,39 +126,65 @@ impl SubPlateAutomation {
                 continue;
             }
 
-            self.world
-                .set(index, rng.random::<u8>());
+            self.world.set(index, rng.random::<u8>());
             break;
         }
     }
 
-    fn calculate_front_lines(&self, commands: &mut Commands, hex_query: Query<&HexMatrixBuild>) {
+    fn calculate_front_lines(
+        &self,
+        commands: &mut Commands,
+        mut hex_query: Single<&mut HexMatrixBuild>,
+        automation: &SubPlateAutomation,
+    ) {
+        let table = &mut hex_query.hex_matrix;
+        let mut table_copy = table.clone();
 
-        let generator = &hex_query.iter().next().unwrap().hex_matrix;
-        let all_points = generator.calculate();
+        let mut edge = (0_usize, 0_usize);
+        for x in 0..table.dimensions.0 {
+            for y in 0..table.dimensions.1 {
+                let color = *table.get_on_square_table(x, y, &automation.world);
+                table.set_dim(x, y, color);
+            }
+        }
 
-        let own_points = all_points.iter().map(|(x, y)| {
-            let x_table = *x as usize;
-            let y_table = *y as usize;
+        for x in 0..table.dimensions.0 {
+            for y in 0..table.dimensions.1 {
+                let color = table.get_dim(x, y);
+                if *color == 0 { continue; }
+                let around = table.around(x, y);
+                if around.iter().all(|x1| *x1 == around[0]) {
+                    table_copy.set_dim(x, y, 0);
+                }else {
+                    let new_color = (color).overflowing_add(128_u8).0;
 
-            (*self.world.get_dim(x_table, y_table), x, y)
-        }).filter(|(v, _, _)| {
-            *v != 0
-        });
+                    table_copy.set_dim(x, y, new_color);
+
+                }
+            }
+        }
+        hex_query.hex_matrix = table_copy;
 
         commands.spawn((HexMatrixRedrawRequest));
     }
     fn calculate_subplates(&self, commands: &mut Commands) {
-        let mut list : HashMap<u8, Vec<usize>> = HashMap::new();
-        self.world.iter().zip(0..self.world.data.len()).for_each(|(world, index)| {
-            if list.contains_key(world) {
-                list.get_mut(world).unwrap().push(index);
-            }
-            else {
-                list.insert(world.clone(), vec![index]);
-            }
-        });
-        println!("{:?}", list.iter().map(|(c, v)| (c.clone(), v.len())).collect::<Vec<_>>());
+        let mut list: HashMap<u8, Vec<usize>> = HashMap::new();
+        self.world
+            .iter()
+            .zip(0..self.world.data.len())
+            .for_each(|(world, index)| {
+                if list.contains_key(world) {
+                    list.get_mut(world).unwrap().push(index);
+                } else {
+                    list.insert(world.clone(), vec![index]);
+                }
+            });
+        println!(
+            "{:?}",
+            list.iter()
+                .map(|(c, v)| (c.clone(), v.len()))
+                .collect::<Vec<_>>()
+        );
     }
 }
 
@@ -194,53 +205,30 @@ pub fn setup_hex_matrix(
 
     println!("Seed hex matrix");
 
-    let resolution = automation.world.side / 4;
+    let resolution = automation.world.side / 2;
 
-    let generator = HexTable::new(resolution, true, 4.0);
-    let mut table = Table::new(false, automation.world.side);
-    generator.calculate().iter().for_each(|(x, y)| {
-        let x = *x as usize;
-        let y = *y as usize;
+    let hex_table = HexTable::new(resolution, 0, 2.0);
 
-        if *automation.world.get_dim(x, y) == 0 {
-            return;
-        }
-
-        table.set_dim(x, y, true);
-    });
-
-    let data = table.get_image_data();
-    let image = Image::new(
-        Extent3d {
-            width: table.side as u32,
-            height: table.side as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::bevy_default(),
-        RenderAssetUsages::default(),
-    );
+    let image = hex_table.get_image_data();
 
     let sprite = view_query.iter().next().unwrap();
 
-
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
-    commands.spawn((HexMatrixBuild{
-        points: table,
-        hex_matrix: generator,
-    }));
+    commands.spawn(
+        (HexMatrixBuild {
+            hex_matrix: hex_table,
+        }),
+    );
 }
 
-
 pub fn update_hex_matrix_view(
-    mut data_query: Query<&HexMatrixBuild>,
+    mut data_query: Single<&HexMatrixBuild>,
     mut request_query: Query<Entity, With<HexMatrixRedrawRequest>>,
     mut view_query: Query<&Sprite, With<HexMatrixView>>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
-){
+) {
     if request_query.is_empty() {
         return;
     }
@@ -248,23 +236,10 @@ pub fn update_hex_matrix_view(
     let req = request_query.iter_mut().next().unwrap();
     commands.entity(req).despawn();
     println!("Update hex matrix view");
-    let table = data_query.iter_mut().next().unwrap();
-    let data = table.points.get_image_data();
-
-    let image = Image::new(
-        Extent3d {
-            width: table.points.side as u32,
-            height: table.points.side as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::bevy_default(),
-        RenderAssetUsages::default(),
-    );
+    let table = data_query.into_inner();
+    let image = table.hex_matrix.get_image_data();
 
     let sprite = view_query.iter().next().unwrap();
-
 
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
@@ -279,7 +254,6 @@ pub struct HexMatrixRedrawRequest;
 pub struct HexMatrixView;
 
 #[derive(Component)]
-pub struct HexMatrixBuild{
-    points: Table<bool>,
-    hex_matrix: HexTable<bool>
+pub struct HexMatrixBuild {
+    hex_matrix: HexTable<u8>,
 }

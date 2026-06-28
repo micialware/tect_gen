@@ -18,19 +18,8 @@ pub fn update_automation_view(
     }
 
     let (sprite, automation) = query.iter().next().unwrap();
-    let size = automation.world.side as u32;
-    let data = automation.world.get_image_data();
-    let image = Image::new(
-        Extent3d {
-            width: size,
-            height: size,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        data,
-        TextureFormat::bevy_default(),
-        RenderAssetUsages::default(),
-    );
+    let image = automation.world.get_image_data();
+
 
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
