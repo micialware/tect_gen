@@ -5,27 +5,29 @@ use crate::table::{IntoImage, Table};
 use bevy::asset::{Assets, RenderAssetUsages};
 use bevy::image::{BevyDefault, Image};
 use bevy::input::ButtonInput;
-use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite};
+use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use rayon::prelude::IntoParallelIterator;
 use crate::seed_automation::SeedAutomation;
-use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation};
+use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation, ViewRedrawRequest};
 use rayon::iter::ParallelIterator;
 
 pub fn update_automation_view(
-    query: Query<(&Sprite, &PlateAutomation)>,
+    query: Single<(&Sprite, &PlateAutomation)>,
+    request: Single<(&ViewRedrawRequest, Entity)>,
     mut images: ResMut<Assets<Image>>,
+    mut commands: Commands,
 ) {
-    if query.is_empty() {
-        return;
-    }
-    let (sprite, automation) = query.iter().next().unwrap();
+
+    let (sprite, automation) = query.into_inner();
     let image = automation.world.get_image_data();
 
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
+
+    commands.entity(request.into_inner().1).despawn();
 }
 
 pub fn update_automation(
@@ -42,12 +44,16 @@ pub fn update_automation(
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
         let random = &mut seeded_rng.0;
 
-        automation.next(random)
+        automation.next(random);
+        commands.spawn((ViewRedrawRequest));
+
     }
 
     if keys.just_pressed(KeyCode::AltLeft) {
         automation.world.grow();
-        println!("Map size {}", automation.world.side)
+        commands.spawn((ViewRedrawRequest));
+        println!("Map size {}", automation.world.side);
+
     }
 
     if keys.just_pressed(KeyCode::Enter) {
@@ -82,7 +88,7 @@ impl PlateAutomation {
                 return false;
             }
 
-            let chance = (around as f32 * 0.2).powi(2);
+            let chance = (around as f32 * 0.25);
             if random > chance {
                 return false;
             }

@@ -13,19 +13,21 @@ use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 use std::time::Instant;
+use crate::plate_automation::PlateAutomation;
 
 pub fn update_automation_view(
-    query: Query<(&Sprite, &SubPlateAutomation)>,
+    query: Single<(&Sprite, &SubPlateAutomation)>,
+    request: Single<(&ViewRedrawRequest, Entity)>,
     mut images: ResMut<Assets<Image>>,
+    mut commands: Commands,
 ) {
-    if query.is_empty() {
-        return;
-    }
-    let (sprite, automation) = query.iter().next().unwrap();
+    let (sprite, automation) = query.into_inner();
     let image = automation.world.get_image_data();
 
     images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
+
+    commands.entity(request.into_inner().1).despawn();
 }
 
 pub fn update_automation(
@@ -39,7 +41,9 @@ pub fn update_automation(
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
         let random = &mut seeded_rng.0;
 
-        automation.next(random)
+        automation.next(random);
+        commands.spawn((ViewRedrawRequest));
+
     }
 
     if keys.just_pressed(KeyCode::AltLeft) {
@@ -48,11 +52,16 @@ pub fn update_automation(
         for _ in 0..16 {
             automation.seed(random);
         }
+
+        commands.spawn((ViewRedrawRequest));
+
     }
 
-    // if keys.just_pressed(KeyCode::AltRight) {
-    //     automation.smooth();
-    // }
+    if keys.just_pressed(KeyCode::AltRight) {
+        automation.smooth();
+        commands.spawn((ViewRedrawRequest));
+        
+    }
 
     if keys.just_pressed(KeyCode::KeyS) {
         automation.calculate_subplates(&mut commands);
@@ -60,6 +69,7 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::KeyF) {
         automation.calculate_front_lines(&mut commands, hex_query, &automation);
+
     }
 }
 
@@ -71,6 +81,7 @@ pub struct SubPlateAutomation {
 impl SubPlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
         let time = Instant::now();
+
 
         for index in 0..self.world.side * self.world.side {
             let current_color = *self.world.get(index);
@@ -97,6 +108,8 @@ impl SubPlateAutomation {
 
             self.world.set(index, color);
         }
+
+        println!("Done in {} mcs", time.elapsed().as_micros());
     }
 
     fn smooth(&mut self) {
@@ -249,6 +262,9 @@ pub struct HexMatrixRequest;
 
 #[derive(Component)]
 pub struct HexMatrixRedrawRequest;
+
+#[derive(Component)]
+pub struct ViewRedrawRequest;
 
 #[derive(Component)]
 pub struct HexMatrixView;
