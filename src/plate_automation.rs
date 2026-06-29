@@ -28,16 +28,14 @@ pub fn update_automation_view(
 }
 
 pub fn update_automation(
-    mut query: Query<(&mut PlateAutomation, Entity)>,
+    mut query: Single<(&mut PlateAutomation, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
 ) {
-    if query.is_empty() {
-        return;
-    }
 
-    let (mut automation, entity) = query.iter_mut().next().unwrap();
+
+    let (mut automation, entity) = query.into_inner();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
         let random = &mut seeded_rng.0;
 

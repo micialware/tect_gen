@@ -4,19 +4,17 @@ use crate::SeededRng;
 use bevy::asset::Assets;
 use bevy::image::Image;
 use bevy::input::ButtonInput;
-use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite};
+use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 
 pub fn update_automation_view(
-    query: Query<(&Sprite, &SeedAutomation)>,
+    query: Single<(&Sprite, &SeedAutomation)>,
     mut images: ResMut<Assets<Image>>,
 ) {
-    if query.is_empty() {
-        return;
-    }
 
-    let (sprite, automation) = query.iter().next().unwrap();
+
+    let (sprite, automation) = query.into_inner();
     let image = automation.world.get_image_data();
 
 
@@ -25,16 +23,13 @@ pub fn update_automation_view(
 }
 
 pub fn update_automation(
-    mut query: Query<(&mut SeedAutomation, Entity)>,
+    mut query: Single<(&mut SeedAutomation, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands) {
+    
 
-    if query.is_empty() {
-        return;
-    }
-
-    let  (mut automation, entity) = query.iter_mut().next().unwrap();
+    let  (mut automation, entity) = query.into_inner();
 
     if keys.just_pressed(KeyCode::Space){
         let random = &mut seeded_rng.0;

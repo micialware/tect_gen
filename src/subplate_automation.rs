@@ -199,18 +199,15 @@ impl SubPlateAutomation {
 }
 
 pub fn setup_hex_matrix(
-    request_query: Query<(&HexMatrixRequest, Entity)>,
-    view_query: Query<&Sprite, With<HexMatrixView>>,
-    mut automation_query: Query<&SubPlateAutomation>,
+    request_query: Single<(&HexMatrixRequest, Entity)>,
+    view_query: Single<&Sprite, With<HexMatrixView>>,
+    mut automation_query: Single<&SubPlateAutomation>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
 ) {
-    if request_query.is_empty() {
-        return;
-    }
 
-    let entity = request_query.iter().next().unwrap().1;
-    let automation = automation_query.iter_mut().next().unwrap();
+    let entity = request_query.into_inner().1;
+    let automation = automation_query.into_inner();
     commands.entity(entity).despawn();
 
     println!("Seed hex matrix");
@@ -221,7 +218,7 @@ pub fn setup_hex_matrix(
 
     let image = hex_table.get_image_data();
 
-    let sprite = view_query.iter().next().unwrap();
+    let sprite = view_query.into_inner();
 
     // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
