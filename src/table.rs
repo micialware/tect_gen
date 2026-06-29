@@ -1,8 +1,7 @@
-use std::ops::{Index, IndexMut};
 use bevy::asset::RenderAssetUsages;
-use bevy::image::BevyDefault;
 use bevy::prelude::*;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use std::ops::{Index, IndexMut};
 
 pub struct Table<T: Clone> {
     default: T,

@@ -8,12 +8,10 @@ use bevy::prelude::{
     Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite,
     With,
 };
-use bevy::tasks::futures_lite::StreamExt;
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
 use std::time::Instant;
-use crate::plate_automation::PlateAutomation;
 
 pub fn update_automation_view(
     query: Single<(&Sprite, &SubPlateAutomation)>,
@@ -42,7 +40,7 @@ pub fn update_automation(
         let random = &mut seeded_rng.0;
 
         automation.next(random);
-        commands.spawn((ViewRedrawRequest));
+        commands.spawn(ViewRedrawRequest);
 
     }
 
@@ -53,18 +51,18 @@ pub fn update_automation(
             automation.seed(random);
         }
 
-        commands.spawn((ViewRedrawRequest));
+        commands.spawn(ViewRedrawRequest);
 
     }
 
     if keys.just_pressed(KeyCode::AltRight) {
         automation.smooth();
-        commands.spawn((ViewRedrawRequest));
+        commands.spawn(ViewRedrawRequest);
 
     }
 
     if keys.just_pressed(KeyCode::KeyS) {
-        automation.calculate_subplates(&mut commands);
+        automation.calculate_subplates();
     }
 
     if keys.just_pressed(KeyCode::KeyF) {
@@ -153,7 +151,6 @@ impl SubPlateAutomation {
         let table = &mut hex_query.hex_matrix;
         let mut table_copy = table.clone();
 
-        let mut edge = (0_usize, 0_usize);
         for x in 0..table.dimensions.0 {
             for y in 0..table.dimensions.1 {
                 let color = *table.get_on_square_table(x, y, &automation.world);
@@ -178,9 +175,9 @@ impl SubPlateAutomation {
         }
         hex_query.hex_matrix = table_copy;
 
-        commands.spawn((HexMatrixRedrawRequest));
+        commands.spawn(HexMatrixRedrawRequest);
     }
-    fn calculate_subplates(&self, commands: &mut Commands) {
+    fn calculate_subplates(&self) {
         let mut list: HashMap<u8, Vec<usize>> = HashMap::new();
         self.world
             .iter()
@@ -202,8 +199,8 @@ impl SubPlateAutomation {
 }
 
 pub fn setup_hex_matrix(
-    mut request_query: Query<(&HexMatrixRequest, Entity)>,
-    mut view_query: Query<&Sprite, With<HexMatrixView>>,
+    request_query: Query<(&HexMatrixRequest, Entity)>,
+    view_query: Query<&Sprite, With<HexMatrixView>>,
     mut automation_query: Query<&SubPlateAutomation>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
@@ -229,30 +226,26 @@ pub fn setup_hex_matrix(
     // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
     commands.spawn(
-        (HexMatrixBuild {
+        HexMatrixBuild {
             hex_matrix: hex_table,
-        }),
+        },
     );
 }
 
 pub fn update_hex_matrix_view(
-    mut data_query: Single<&HexMatrixBuild>,
-    mut request_query: Query<Entity, With<HexMatrixRedrawRequest>>,
-    mut view_query: Query<&Sprite, With<HexMatrixView>>,
+    data_query: Single<&HexMatrixBuild>,
+    request_query: Single<Entity, With<HexMatrixRedrawRequest>>,
+    view_query: Single<&Sprite, With<HexMatrixView>>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
 ) {
-    if request_query.is_empty() {
-        return;
-    }
-
-    let req = request_query.iter_mut().next().unwrap();
+    let req = request_query.into_inner();
     commands.entity(req).despawn();
     println!("Update hex matrix view");
     let table = data_query.into_inner();
     let image = table.hex_matrix.get_image_data();
 
-    let sprite = view_query.iter().next().unwrap();
+    let sprite = view_query.into_inner();
 
     // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();

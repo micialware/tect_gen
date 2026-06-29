@@ -1,4 +1,3 @@
-use std::time::Instant;
 use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation, ViewRedrawRequest};
 use crate::table::{IntoImage, Table};
 use crate::SeededRng;
@@ -72,7 +71,7 @@ pub struct PlateAutomation {
 
 impl PlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
-        let time = Instant::now();
+        // let time = Instant::now();
         let range = 0..self.world.side * self.world.side;
         let randoms = range.clone().map(|_| rng.random::<f32>()).collect::<Vec<f32>>();
         let updated = range.into_par_iter().zip(randoms).map(|(index, random)| {

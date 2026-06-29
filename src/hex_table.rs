@@ -6,7 +6,6 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 
 #[derive(Clone)]
 pub struct HexTable<T: Clone> {
-    default: T,
     pub(crate) data: Vec<T>,
     pub(crate) len: usize,
     pub(crate) scale: f32,
@@ -19,7 +18,6 @@ impl<T: Clone> HexTable<T> {
         let rows = len - 1;
         let columns = (len as f32 / VERTICAL_OFFSET) as usize;
         Self {
-            default: default.clone(),
             len,
             scale,
             data: vec![default; rows * columns],
@@ -27,26 +25,26 @@ impl<T: Clone> HexTable<T> {
         }
     }
 
-    pub fn calculate(&self) -> Vec<(f32, f32)> {
-        let mut vec = Vec::with_capacity(self.len * self.len);
-        let mut index = 0;
-        loop {
-            let x = index % self.len;
-            let y = index / self.len;
-            let y_point = y as f32 * VERTICAL_OFFSET;
-
-            if y_point as usize >= self.len {
-                break;
-            }
-            let mut x_point = x as f32;
-            if y % 2 == 1 {
-                x_point += 0.5;
-            }
-            vec.push((x_point * self.scale, y_point * self.scale));
-            index += 1;
-        }
-        vec
-    }
+    // pub fn calculate(&self) -> Vec<(f32, f32)> {
+    //     let mut vec = Vec::with_capacity(self.len * self.len);
+    //     let mut index = 0;
+    //     loop {
+    //         let x = index % self.len;
+    //         let y = index / self.len;
+    //         let y_point = y as f32 * VERTICAL_OFFSET;
+    //
+    //         if y_point as usize >= self.len {
+    //             break;
+    //         }
+    //         let mut x_point = x as f32;
+    //         if y % 2 == 1 {
+    //             x_point += 0.5;
+    //         }
+    //         vec.push((x_point * self.scale, y_point * self.scale));
+    //         index += 1;
+    //     }
+    //     vec
+    // }
 
     pub fn around(&self, x: usize, y: usize) -> Vec<&T> {
         let x = x as isize;

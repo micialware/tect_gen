@@ -1,13 +1,12 @@
-use crate::SeededRng;
+use crate::plate_automation::PlateAutomation;
 use crate::table::{IntoImage, Table};
-use bevy::asset::{Assets, RenderAssetUsages};
-use bevy::image::{BevyDefault, Image};
+use crate::SeededRng;
+use bevy::asset::Assets;
+use bevy::image::Image;
 use bevy::input::ButtonInput;
 use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, ResMut, Sprite};
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
-use crate::plate_automation::PlateAutomation;
 
 pub fn update_automation_view(
     query: Query<(&Sprite, &SeedAutomation)>,
@@ -56,7 +55,6 @@ pub struct SeedAutomation {
 
 impl SeedAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
-        let len = (self.world.side * self.world.side) as f32;
         loop {
             let x = rng.random_range(16..48);
             let y = rng.random_range(16..48);
