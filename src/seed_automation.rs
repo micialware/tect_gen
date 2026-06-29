@@ -21,7 +21,7 @@ pub fn update_automation_view(
     let image = automation.world.get_image_data();
 
 
-    images.remove(sprite.image.id());
+    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 }
 

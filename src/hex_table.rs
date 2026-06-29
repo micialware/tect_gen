@@ -1,9 +1,8 @@
 use crate::table::{IntoImage, Table};
 use bevy::asset::RenderAssetUsages;
-use bevy::image::{BevyDefault, Image};
+use bevy::image::Image;
 use bevy::prelude::Color;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-use std::slice::Iter;
 
 #[derive(Clone)]
 pub struct HexTable<T: Clone> {

@@ -1,18 +1,16 @@
-use rayon::iter::IndexedParallelIterator;
 use std::time::Instant;
-use crate::SeededRng;
+use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation, ViewRedrawRequest};
 use crate::table::{IntoImage, Table};
-use bevy::asset::{Assets, RenderAssetUsages};
-use bevy::image::{BevyDefault, Image};
+use crate::SeededRng;
+use bevy::asset::Assets;
+use bevy::image::Image;
 use bevy::input::ButtonInput;
-use bevy::prelude::{Color, Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite};
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
-use rayon::prelude::IntoParallelIterator;
-use crate::seed_automation::SeedAutomation;
-use crate::subplate_automation::{HexMatrixRequest, SubPlateAutomation, ViewRedrawRequest};
+use rayon::iter::IndexedParallelIterator;
 use rayon::iter::ParallelIterator;
+use rayon::prelude::IntoParallelIterator;
 
 pub fn update_automation_view(
     query: Single<(&Sprite, &PlateAutomation)>,
@@ -24,7 +22,7 @@ pub fn update_automation_view(
     let (sprite, automation) = query.into_inner();
     let image = automation.world.get_image_data();
 
-    images.remove(sprite.image.id());
+    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 
     commands.entity(request.into_inner().1).despawn();
@@ -45,13 +43,13 @@ pub fn update_automation(
         let random = &mut seeded_rng.0;
 
         automation.next(random);
-        commands.spawn((ViewRedrawRequest));
+        commands.spawn(ViewRedrawRequest);
 
     }
 
     if keys.just_pressed(KeyCode::AltLeft) {
         automation.world.grow();
-        commands.spawn((ViewRedrawRequest));
+        commands.spawn(ViewRedrawRequest);
         println!("Map size {}", automation.world.side);
 
     }
@@ -63,7 +61,7 @@ pub fn update_automation(
         commands.entity(entity).remove::<PlateAutomation>().insert(SubPlateAutomation{
             world: new_table
         });
-        commands.spawn((HexMatrixRequest));
+        commands.spawn(HexMatrixRequest);
     }
 }
 
@@ -76,7 +74,7 @@ impl PlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
         let time = Instant::now();
         let range = 0..self.world.side * self.world.side;
-        let randoms = range.clone().map(|x| rng.random::<f32>()).collect::<Vec<f32>>();
+        let randoms = range.clone().map(|_| rng.random::<f32>()).collect::<Vec<f32>>();
         let updated = range.into_par_iter().zip(randoms).map(|(index, random)| {
             if *self.world.get(index) {
                 return true;
@@ -88,7 +86,7 @@ impl PlateAutomation {
                 return false;
             }
 
-            let chance = (around as f32 * 0.25);
+            let chance = (around as f32 * 0.25).powi(2);
             if random > chance {
                 return false;
             }
@@ -97,6 +95,8 @@ impl PlateAutomation {
         }).collect::<Vec<bool>>();
 
         self.world.data = updated;
+
+        // println!("Done in {} mcs", time.elapsed().as_micros());
 
     }
 }

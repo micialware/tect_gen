@@ -24,7 +24,7 @@ pub fn update_automation_view(
     let (sprite, automation) = query.into_inner();
     let image = automation.world.get_image_data();
 
-    images.remove(sprite.image.id());
+    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 
     commands.entity(request.into_inner().1).despawn();
@@ -60,7 +60,7 @@ pub fn update_automation(
     if keys.just_pressed(KeyCode::AltRight) {
         automation.smooth();
         commands.spawn((ViewRedrawRequest));
-        
+
     }
 
     if keys.just_pressed(KeyCode::KeyS) {
@@ -226,7 +226,7 @@ pub fn setup_hex_matrix(
 
     let sprite = view_query.iter().next().unwrap();
 
-    images.remove(sprite.image.id());
+    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
     commands.spawn(
         (HexMatrixBuild {
@@ -254,7 +254,7 @@ pub fn update_hex_matrix_view(
 
     let sprite = view_query.iter().next().unwrap();
 
-    images.remove(sprite.image.id());
+    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 }
 #[derive(Component)]
