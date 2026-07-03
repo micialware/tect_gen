@@ -1,7 +1,7 @@
 use crate::collision_world::{CollisionBody, CollisionWorld};
 use crate::hex_table::HexTable;
 use crate::table::{IntoImage, Table};
-use crate::{Moving, SeededRng};
+use crate::{Moving, SeededRng, RECTANGLE_SIDE};
 use bevy::asset::{Assets, RenderAssetUsages};
 use bevy::image::Image;
 use bevy::input::ButtonInput;
@@ -108,6 +108,10 @@ fn create_collision_world(
             borders[index].push(Vec2::new(coordinates.0, coordinates.1));
         }
     }
+
+    let view_offset = query.world.side as f32 / 2.0;
+
+
     let plates_data = territories
         .iter()
         .map(|v| {
@@ -169,7 +173,7 @@ fn create_collision_world(
 
         let size = image.size();
 
-        let mut entity = commands.spawn((Transform::from_xyz(center.x + size.x as f32 / 2.0, -center.y - size.y as f32 / 2.0, 0.0),));
+        let mut entity = commands.spawn((Transform::from_xyz(center.x + size.x as f32 / 2.0 - view_offset, -center.y - size.y as f32 / 2.0 + view_offset, 0.0),));
         entity.add_child(view);
         let entity_id = entity.id();
 
@@ -185,7 +189,12 @@ fn create_collision_world(
 
         world.bodies.push(col_body);
     }
-    commands.spawn((Transform::default(), Moving)).add_children(parts.as_slice());
+    let scale =  RECTANGLE_SIDE as f32 / query.world.side as f32;
+    commands.spawn((Transform{
+        translation: Vec3::ZERO,
+        rotation: Quat::default(),
+        scale: vec3(scale, scale, 1.0),
+    })).add_children(parts.as_slice());
 }
 
 #[derive(Component)]
