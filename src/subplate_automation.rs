@@ -66,7 +66,7 @@ pub fn update_automation(
     }
 
     if keys.just_pressed(KeyCode::Enter) {
-        // commands.entity(entity).despawn();
+        commands.entity(entity).despawn();
         create_collision_world(commands, &automation, &hex_query, images);
     }
 }
@@ -151,7 +151,7 @@ fn create_collision_world(
                     .unwrap();
             });
 
-            let image_offset =  Vec2::new(min_x as f32, min_y as f32);
+            let image_offset =  Vec2::new(min_x as f32  + size.x as f32 / 2.0 - view_offset, - (min_y as f32) - size.y as f32 / 2.0 + view_offset);
 
             (v.len(), image_offset, image, Vec2::ZERO)
         })
@@ -171,9 +171,8 @@ fn create_collision_world(
             ))
             .id();
 
-        let size = image.size();
 
-        let mut entity = commands.spawn((Transform::from_xyz(center.x + size.x as f32 / 2.0 - view_offset, -center.y - size.y as f32 / 2.0 + view_offset, 0.0),));
+        let mut entity = commands.spawn((Transform::from_xyz(center.x, center.y, 0.0),));
         entity.add_child(view);
         let entity_id = entity.id();
 
@@ -232,7 +231,7 @@ impl SubPlateAutomation {
             self.world.set(index, color);
         }
 
-        println!("Done in {} mcs", time.elapsed().as_micros());
+        // println!("Done in {} mcs", time.elapsed().as_micros());
     }
 
     fn smooth(&mut self) {
