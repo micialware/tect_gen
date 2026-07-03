@@ -5,6 +5,7 @@ mod seed_automation;
 mod subplate_automation;
 mod table;
 mod collision_world;
+mod collision_automation;
 
 use crate::subplate_automation::HexMatrixView;
 use crate::table::{Table};
@@ -56,7 +57,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
 
     commands.spawn((shape, automation, Moving));
 
-    let seeded_rng = ChaCha8Rng::seed_from_u64(rand::random());
+    let seeded_rng = ChaCha8Rng::seed_from_u64(0);
     commands.insert_resource(SeededRng(seeded_rng));
 
     let mut hex_image = Image::default();

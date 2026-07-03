@@ -4,7 +4,7 @@ use crate::SeededRng;
 use bevy::asset::Assets;
 use bevy::image::Image;
 use bevy::input::ButtonInput;
-use bevy::prelude::{Commands, Component, Entity, KeyCode, Query, Res, ResMut, Single, Sprite};
+use bevy::prelude::*;
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 
@@ -18,12 +18,11 @@ pub fn update_automation_view(
     let image = automation.world.get_image_data();
 
 
-    // images.remove(sprite.image.id());
     images.insert(sprite.image.id(), image).unwrap();
 }
 
 pub fn update_automation(
-    mut query: Single<(&mut SeedAutomation, Entity)>,
+    query: Single<(&mut SeedAutomation, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands) {
