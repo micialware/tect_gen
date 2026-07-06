@@ -10,7 +10,6 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use rand::RngExt;
 use rand_chacha::ChaCha8Rng;
 use std::collections::HashMap;
-use std::time::Instant;
 
 pub fn update_automation_view(
     query: Single<(&Sprite, &SubPlateAutomation)>,
@@ -33,6 +32,8 @@ pub fn update_automation(
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let (mut automation, entity) = query.into_inner();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
@@ -67,7 +68,7 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::Enter) {
         commands.entity(entity).despawn();
-        create_collision_world(commands, &automation, &hex_query, images);
+        create_collision_world(commands, &automation, &hex_query, images, meshes, materials);
     }
 }
 
@@ -76,6 +77,8 @@ fn create_collision_world(
     query: &Mut<SubPlateAutomation>,
     hex_query: &Single<&mut HexMatrixBuild>,
     mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     println!("Switching to CollisionAutomation");
     let mut colors = query.world.data.clone();
@@ -117,7 +120,7 @@ fn create_collision_world(
         .map(|v| {
             let center = v
                 .iter()
-                .map(|(x, y)| Vec2::new(*x as f32, *y as f32))
+                .map(|(x, y)| Vec2::new(*x as f32 - view_offset, -(*y as f32) + view_offset))
                 .collect::<Vec<_>>()
                 .into_iter()
                 .sum::<Vec2>()
@@ -152,28 +155,37 @@ fn create_collision_world(
             });
 
             let image_offset =  Vec2::new(min_x as f32  + size.x as f32 / 2.0 - view_offset, - (min_y as f32) - size.y as f32 / 2.0 + view_offset);
-
-            (v.len(), image_offset, image, Vec2::ZERO)
+            (v.len(), image_offset, image, center - image_offset)
         })
         .collect::<Vec<_>>();
 
     let mut world = CollisionWorld { bodies: vec![] };
 
+    let center_color = materials.add(Color::srgb_u8(63,0,255));
+    let center_shape = meshes.add(Circle::new(5.0));
     let mut parts = Vec::with_capacity(plates_data.len());
     for index in 0..plates_data.len() {
         let (mass, center, image, offset) = plates_data.get(index).unwrap();
         let image_handle = images.add(image.clone());
 
-        let view = commands
+        let view_id = commands
             .spawn((
-                Transform::from_xyz(offset.x, offset.y, 0.0),
                 Sprite::from_image(image_handle),
+            ))
+            .id();
+
+        let mass_id = commands
+            .spawn((
+                Transform::from_xyz(offset.x, offset.y, 2.0),
+                Mesh2d(center_shape.clone()),
+                MeshMaterial2d(center_color.clone()),
             ))
             .id();
 
 
         let mut entity = commands.spawn((Transform::from_xyz(center.x, center.y, 0.0),));
-        entity.add_child(view);
+        entity.add_child(view_id);
+        entity.add_child(mass_id);
         let entity_id = entity.id();
 
         parts.push(entity_id);
@@ -188,12 +200,13 @@ fn create_collision_world(
 
         world.bodies.push(col_body);
     }
-    let scale =  RECTANGLE_SIDE as f32 / query.world.side as f32;
-    commands.spawn((Transform{
+    let scale =  RECTANGLE_SIDE / query.world.side as f32;
+    let presentation = commands.spawn((Transform{
         translation: Vec3::ZERO,
         rotation: Quat::default(),
         scale: vec3(scale, scale, 1.0),
-    })).add_children(parts.as_slice());
+    })).add_children(parts.as_slice()).id();
+    commands.spawn((Transform::default(), Moving)).add_child(presentation);
 }
 
 #[derive(Component)]
@@ -203,7 +216,6 @@ pub struct SubPlateAutomation {
 
 impl SubPlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
-        let time = Instant::now();
 
         for index in 0..self.world.side * self.world.side {
             let current_color = *self.world.get(index);
