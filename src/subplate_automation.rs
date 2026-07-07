@@ -1,7 +1,7 @@
 use crate::collision_world::{CollisionBody, CollisionWorld};
 use crate::hex_table::HexTable;
 use crate::table::{IntoImage, Table};
-use crate::{Moving, SeededRng, RECTANGLE_SIDE};
+use crate::{SeededRng, RECTANGLE_SIDE};
 use bevy::asset::{Assets, RenderAssetUsages};
 use bevy::image::Image;
 use bevy::input::ButtonInput;
@@ -35,7 +35,6 @@ pub fn update_automation(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     hex_view: Single<Entity, With<HexMatrixView>>,
-
 ) {
     let (mut automation, entity) = query.into_inner();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
@@ -70,7 +69,15 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::Enter) {
         commands.entity(entity).despawn();
-        create_collision_world(commands, &automation, &hex_query, images, meshes, materials, hex_view);
+        create_collision_world(
+            commands,
+            &automation,
+            &hex_query,
+            images,
+            meshes,
+            materials,
+            hex_view,
+        );
     }
 }
 
@@ -82,7 +89,6 @@ fn create_collision_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     hex_view: Single<Entity, With<HexMatrixView>>,
-
 ) {
     println!("Switching to CollisionAutomation");
     let mut colors = query.world.data.clone();
@@ -107,7 +113,7 @@ fn create_collision_world(
 
     for x in 0..hex_matrix.dimensions.0 {
         for y in 0..hex_matrix.dimensions.1 {
-            let color = *query.world.get_dim(x, y);
+            let color = *hex_matrix.get_dim(x, y);
             if color == 0 {
                 continue;
             }
@@ -119,7 +125,6 @@ fn create_collision_world(
     }
 
     let view_offset = query.world.side as f32 / 2.0;
-
 
     let plates_data = territories
         .iter()
@@ -160,28 +165,27 @@ fn create_collision_world(
                     .unwrap();
             });
 
-            let image_offset =  Vec2::new(min_x as f32  + size.x as f32 / 2.0 - view_offset, - (min_y as f32) - size.y as f32 / 2.0 + view_offset);
+            let image_offset = Vec2::new(
+                min_x as f32 + size.x as f32 / 2.0 - view_offset,
+                -(min_y as f32) - size.y as f32 / 2.0 + view_offset,
+            );
             (v.len(), image_offset, image, center - image_offset)
         })
         .collect::<Vec<_>>();
 
     let mut world = CollisionWorld { bodies: vec![] };
 
-    let border_color = materials.add(Color::srgb_u8(255,255,1));
+    let border_color = materials.add(Color::srgb_u8(0, 255, 0));
     let border_shape = meshes.add(Circle::new(1.0));
 
-    let center_color = materials.add(Color::srgb_u8(63,0,255));
+    let center_color = materials.add(Color::srgb_u8(63, 0, 255));
     let center_shape = meshes.add(Circle::new(5.0));
     let mut parts = Vec::with_capacity(plates_data.len());
     for index in 0..plates_data.len() {
         let (mass, center, image, offset) = plates_data.get(index).unwrap();
         let image_handle = images.add(image.clone());
 
-        let view_id = commands
-            .spawn((
-                Sprite::from_image(image_handle),
-            ))
-            .id();
+        let view_id = commands.spawn((Sprite::from_image(image_handle),)).id();
 
         let mass_id = commands
             .spawn((
@@ -192,6 +196,17 @@ fn create_collision_world(
             .id();
 
 
+        let border = borders[index].iter().map(|border_point| {
+            let border_point = Vec2::new(border_point.x - view_offset, -border_point.y + view_offset);
+            let delta = border_point - center;
+            commands
+                .spawn((
+                    Transform::from_xyz(delta.x, delta.y, 2.0),
+                    Mesh2d(border_shape.clone()),
+                    MeshMaterial2d(border_color.clone()),
+                ))
+                .id()
+        }).collect::<Vec<_>>();
 
         let mut entity = commands.spawn((Transform::from_xyz(center.x, center.y, 0.0),));
         entity.add_child(view_id);
@@ -201,6 +216,8 @@ fn create_collision_world(
         parts.push(entity_id);
 
 
+
+        entity.add_children(border.as_slice());
 
         let col_body = CollisionBody {
             value: colors[index],
@@ -212,12 +229,16 @@ fn create_collision_world(
 
         world.bodies.push(col_body);
     }
-    let scale =  RECTANGLE_SIDE / query.world.side as f32;
-   commands.spawn((Transform{
-        translation: Vec3::ZERO,
-        rotation: Quat::default(),
-        scale: vec3(scale, scale, 1.0),
-    })).add_children(parts.as_slice());
+    let scale = RECTANGLE_SIDE / query.world.side as f32;
+    commands
+        .spawn(
+            (Transform {
+                translation: Vec3::ZERO,
+                rotation: Quat::default(),
+                scale: vec3(scale, scale, 1.0),
+            }),
+        )
+        .add_children(parts.as_slice());
 
     commands.entity(*hex_view).despawn();
 }
@@ -229,7 +250,6 @@ pub struct SubPlateAutomation {
 
 impl SubPlateAutomation {
     fn next(&mut self, rng: &mut ChaCha8Rng) {
-
         for index in 0..self.world.side * self.world.side {
             let current_color = *self.world.get(index);
             if current_color == 0 || current_color != u8::MAX {
