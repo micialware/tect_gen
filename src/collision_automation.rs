@@ -14,3 +14,7 @@ pub struct CollisionAutomation {
     pub border: HexTable<u8>,
 }
 
+#[derive(Component)]
+pub struct EdgePoint{
+    
+}

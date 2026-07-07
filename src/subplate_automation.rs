@@ -27,13 +27,15 @@ pub fn update_automation_view(
 
 pub fn update_automation(
     query: Single<(&mut SubPlateAutomation, Entity)>,
-    mut hex_query: Single<&mut HexMatrixBuild>,
+    mut hex_query: Single<(&mut HexMatrixBuild, Entity)>,
     mut seeded_rng: ResMut<SeededRng>,
     keys: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    hex_view: Single<Entity, With<HexMatrixView>>,
+
 ) {
     let (mut automation, entity) = query.into_inner();
     if keys.just_pressed(KeyCode::Space) || keys.all_pressed([KeyCode::Space, KeyCode::ShiftLeft]) {
@@ -68,17 +70,19 @@ pub fn update_automation(
 
     if keys.just_pressed(KeyCode::Enter) {
         commands.entity(entity).despawn();
-        create_collision_world(commands, &automation, &hex_query, images, meshes, materials);
+        create_collision_world(commands, &automation, &hex_query, images, meshes, materials, hex_view);
     }
 }
 
 fn create_collision_world(
     mut commands: Commands,
     query: &Mut<SubPlateAutomation>,
-    hex_query: &Single<&mut HexMatrixBuild>,
+    hex_query: &Single<(&mut HexMatrixBuild, Entity)>,
     mut images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    hex_view: Single<Entity, With<HexMatrixView>>,
+
 ) {
     println!("Switching to CollisionAutomation");
     let mut colors = query.world.data.clone();
@@ -99,15 +103,17 @@ fn create_collision_world(
         }
     }
 
-    for x in 0..hex_query.hex_matrix.dimensions.0 {
-        for y in 0..hex_query.hex_matrix.dimensions.1 {
+    let hex_matrix = &hex_query.0.hex_matrix;
+
+    for x in 0..hex_matrix.dimensions.0 {
+        for y in 0..hex_matrix.dimensions.1 {
             let color = *query.world.get_dim(x, y);
             if color == 0 {
                 continue;
             }
 
             let index = colors.iter().position(|v| *v == color).unwrap();
-            let coordinates = hex_query.hex_matrix.get_offset_of(x, y);
+            let coordinates = hex_matrix.get_offset_of(x, y);
             borders[index].push(Vec2::new(coordinates.0, coordinates.1));
         }
     }
@@ -161,6 +167,9 @@ fn create_collision_world(
 
     let mut world = CollisionWorld { bodies: vec![] };
 
+    let border_color = materials.add(Color::srgb_u8(255,255,1));
+    let border_shape = meshes.add(Circle::new(1.0));
+
     let center_color = materials.add(Color::srgb_u8(63,0,255));
     let center_shape = meshes.add(Circle::new(5.0));
     let mut parts = Vec::with_capacity(plates_data.len());
@@ -183,12 +192,15 @@ fn create_collision_world(
             .id();
 
 
+
         let mut entity = commands.spawn((Transform::from_xyz(center.x, center.y, 0.0),));
         entity.add_child(view_id);
         entity.add_child(mass_id);
         let entity_id = entity.id();
 
         parts.push(entity_id);
+
+
 
         let col_body = CollisionBody {
             value: colors[index],
@@ -201,12 +213,13 @@ fn create_collision_world(
         world.bodies.push(col_body);
     }
     let scale =  RECTANGLE_SIDE / query.world.side as f32;
-    let presentation = commands.spawn((Transform{
+   commands.spawn((Transform{
         translation: Vec3::ZERO,
         rotation: Quat::default(),
         scale: vec3(scale, scale, 1.0),
-    })).add_children(parts.as_slice()).id();
-    commands.spawn((Transform::default(), Moving)).add_child(presentation);
+    })).add_children(parts.as_slice());
+
+    commands.entity(*hex_view).despawn();
 }
 
 #[derive(Component)]
@@ -281,10 +294,10 @@ impl SubPlateAutomation {
     fn calculate_front_lines(
         &self,
         commands: &mut Commands,
-        mut hex_query: &mut Single<&mut HexMatrixBuild>,
+        mut hex_query: &mut Single<(&mut HexMatrixBuild, Entity)>,
         automation: &SubPlateAutomation,
     ) {
-        let table = &mut hex_query.hex_matrix;
+        let table = &mut hex_query.0.hex_matrix;
         let mut table_copy = table.clone();
 
         for x in 0..table.dimensions.0 {
@@ -308,7 +321,7 @@ impl SubPlateAutomation {
                 }
             }
         }
-        hex_query.hex_matrix = table_copy;
+        hex_query.0.hex_matrix = table_copy;
 
         commands.spawn(HexMatrixRedrawRequest);
     }

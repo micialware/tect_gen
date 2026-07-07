@@ -44,7 +44,7 @@ fn main() {
 }
 
 fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    commands.spawn(Camera2d);
+    commands.spawn((Camera2d, Transform::default(), Moving));
 
     let handle = images.add(Image::default());
 
@@ -55,7 +55,7 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         world: Table::new(false, 64),
     };
 
-    commands.spawn((shape, automation, Moving));
+    commands.spawn((shape, automation));
 
     let seeded_rng = ChaCha8Rng::seed_from_u64(0);
     commands.insert_resource(SeededRng(seeded_rng));
@@ -78,25 +78,24 @@ fn setup(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
         shape,
         HexMatrixView,
         Transform::from_xyz(0.0, 0.0, 1.0),
-        Moving,
     ));
 }
 
 fn moving_system(hex: Query<&mut Transform, With<Moving>>, keys: Res<ButtonInput<KeyCode>>) {
     for mut transform in hex {
         if keys.pressed(KeyCode::ArrowDown) {
-            transform.translation.y += 3.0;
-        }
-
-        if keys.pressed(KeyCode::ArrowUp) {
             transform.translation.y -= 3.0;
         }
 
+        if keys.pressed(KeyCode::ArrowUp) {
+            transform.translation.y += 3.0;
+        }
+
         if keys.pressed(KeyCode::ArrowLeft) {
-            transform.translation.x += 3.0;
+            transform.translation.x -= 3.0;
         }
         if keys.pressed(KeyCode::ArrowRight) {
-            transform.translation.x -= 3.0;
+            transform.translation.x += 3.0;
         }
 
         if keys.pressed(KeyCode::PageUp) {
